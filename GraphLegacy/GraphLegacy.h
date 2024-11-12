@@ -8,7 +8,22 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <cassert>
+/*
+ИСПРАВЛЕНО:
+1. КОММЕНТАРИИ: ДОБАВЛЕНО --- ОПИСАНИЕ БРОСАНИЯ ИСКЛЮЧЕНИЙ
+2. КОД: РАНЬШЕ ГРАФ ХРАНИЛ ПОЛЕ РАЗМЕРА. СЕЙЧАС -- НЕ ХРАНИТ
+3. МИН.ПУТЬ: ЛИСТОЧЕК С ОПИСАНИЕМ АЛГОРИТМА
+
+АНАЛИЗ ГРАФА:
+1. ОПИСАНИЕ --- ДОБАВЛЕНО ОПИСАНИЕ ТОГО, ЧТО ЗНАЧАТ СВЯЗИ МЕЖДУ УЗЛАМИ (УЧЕНЫМИ)
+2. МЕТРИКИ --- ОПИСАНИЕ ТОГО, ЧТО ТАКОЕ РАЗНЫЕ ПАРАМЕТРЫ В ЛАБОРАТОРИИ ДАННЫХ.
+
+*/
+
+
+
 /*
 | Операция                                   | Сложность BigO         |
 |--------------------------------------------|-------------------------|
@@ -22,16 +37,16 @@
 | getEdgeWeight(const T& vertex1, const T& vertex2) | O(n)               |
 | printVertices()                            | O(n)                    |
 | printEdges()                               | O(n^2)                  |
-| getEdgeCount()                            | O(n^2)                  |
-| getVertexCount()                          | O(1)                    |
+| getEdgeCount()                             | O(n^2)                  |
+| getVertexCount()                           | O(1)                    |
 | findShortestPath(const T& startVertex, const T& endVertex) | O(n^2 + E) |
-| depthFirstSearch(const T& startVertex)    | O(n + E)                |
-| breadthFirstSearch(const T& startVertex)  | O(n + E)                |
+| depthFirstSearch(const T& startVertex)     | O(n + E)                |
+| breadthFirstSearch(const T& startVertex)   | O(n + E)                |
 | printAdjacencyMatrix()                     | O(n^2)                  |
 | updateEdge(const T& startVertex, const T& endVertex, double weight) | O(n) |
 | findAllPaths(const T& startVertex, const T& endVertex) | O(n! + E)        |
 | getVertexDegree(const T& vertex)           | O(n)                    |
-| getEdgesWeightSum()                       | O(n^2)                  |
+| getEdgesWeightSum()                        | O(n^2)                  |
 */
 using namespace std;
 // Класс Взвешенного Графа
@@ -40,18 +55,17 @@ class WeightedGraphLegacy {
 private:
     vector<T> vertices; // Список вершин
     vector<vector<double>> adjacencyMatrix; // Матрица смежности. Хранится нижняя треугольная матрица для экономии памяти
-    int size; // Размер графа (число вершин)
 
 public:
     // Конструктор
-    WeightedGraphLegacy() : size(0) {}
+    WeightedGraphLegacy() {}
 
     // Деструктор
     ~WeightedGraphLegacy() {}
 
     // Метод поиска вершины в списке
-    int findVertex(const T& vertex) {
-        for (int i = 0; i < size; ++i) {
+    int findVertex(const T& vertex) const {
+        for (int i = 0; i < vertices.size(); ++i) {
             if (vertices[i] == vertex) {
                 return i;
             }
@@ -60,19 +74,18 @@ public:
     }
 
     // Метод поиска позиции вершины в списке
-    int getVertexPosition(const T& vertex) {
+    int getVertexPosition(const T& vertex) const {
         return findVertex(vertex);
     }
 
-    // Метод вставки вершины
+    // Метод вставки вершины. Бросает исключение out_of_range если вершина существует 
     void insertVertex(const T& vertex) {
         if (findVertex(vertex) != -1) {
             throw out_of_range("Вершина уже существует в графе.");
         }
 
-        int newSize = size + 1;
+        int newSize = vertices.size() + 1;
         vertices.push_back(vertex);
-        size = newSize;
 
         // Обновление матрицы смежности
         if (adjacencyMatrix.empty()) {
@@ -86,7 +99,7 @@ public:
         }
     }
 
-    // Метод удаления вершины
+    // Метод удаления вершины. Бросает исключение out_of_range если вершина не существует 
     void removeVertex(const T& vertex) {
         int position = findVertex(vertex);
         if (position == -1) {
@@ -94,11 +107,10 @@ public:
         }
 
         vertices.erase(vertices.begin() + position);
-        size--;
 
         // Обновление матрицы смежности
         adjacencyMatrix.erase(adjacencyMatrix.begin() + position);
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             adjacencyMatrix[i].erase(adjacencyMatrix[i].begin() + position);
         }
     }
@@ -129,7 +141,7 @@ public:
     //    adjacencyMatrix[position2][position1] = 0.0; // Для неориентированного графа
     //}
 
-    // Метод вставки ребра
+    // Метод вставки ребра. Бросает исключение out_of_range если вершина не существует 
     void insertEdge(const T& vertex1, const T& vertex2, double weight) {
         int position1 = findVertex(vertex1);
         int position2 = findVertex(vertex2);
@@ -145,7 +157,7 @@ public:
         adjacencyMatrix[position2][position1] = weight;
     }
 
-    // Метод удаления ребра
+    // Метод удаления ребра. Бросает исключение out_of_range если вершина не существует 
     void removeEdge(const T& vertex1, const T& vertex2) {
         int position1 = findVertex(vertex1);
         int position2 = findVertex(vertex2);
@@ -162,15 +174,15 @@ public:
     }
 
 
-    // Метод возврата списка смежных вершин
-    vector<T> getAdjacentVertices(const T& vertex) {
+    // Метод возврата списка смежных вершин. Бросает исключение out_of_range если вершина не существует 
+    vector<T> getAdjacentVertices(const T& vertex) const {
         int position = findVertex(vertex);
         if (position == -1) {
             throw out_of_range("Одна или обе вершины не найдены в графе.");
         }
 
         vector<T> adjacentVertices;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             if (adjacencyMatrix[position][i] != 0.0) {
                 adjacentVertices.push_back(vertices[i]);
             }
@@ -190,8 +202,8 @@ public:
     //    return adjacencyMatrix[position1][position2];
     //}
 
-    // Метод возврата веса ребра между двумя вершинами
-    double getEdgeWeight(const T& vertex1, const T& vertex2) {
+    // Метод возврата веса ребра между двумя вершинами. Бросает исключение out_of_range если вершина не существует 
+    double getEdgeWeight(const T& vertex1, const T& vertex2) const {
         int position1 = findVertex(vertex1);
         int position2 = findVertex(vertex2);
 
@@ -207,7 +219,7 @@ public:
     }
 
     // Метод вывода списка вершин
-    void printVertices() {
+    void printVertices() const {
         cout << "Список вершин: ";
         for (const auto& vertex : vertices) {
             cout << vertex << " ";
@@ -242,9 +254,9 @@ public:
     //}
 
     // Метод вывода списка ребер
-    void printEdges() {
+    void printEdges() const {
         cout << "Список ребер: ";
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             for (int j = 0; j < i; ++j) {
                 if (adjacencyMatrix[i][j] != 0.0) {
                     cout << vertices[i] << " - " << vertices[j] << " (вес: " << adjacencyMatrix[i][j] << ") ";
@@ -255,9 +267,9 @@ public:
     }
 
     // Метод возвращения количества ребер
-    int getEdgeCount() {
+    int getEdgeCount() const {
         int edgeCount = 0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             for (int j = 0; j < i; ++j) {
                 if (adjacencyMatrix[i][j] != 0.0) {
                     edgeCount++;
@@ -268,8 +280,8 @@ public:
     }
 
     // Метод возвращения количества вершин
-    int getVertexCount() {
-        return size;
+    int getVertexCount() const {
+        return vertices.size();
     }
 
     //// Процедура поиска минимально возможного пути между двумя вершинами методом Дейкстры
@@ -332,8 +344,8 @@ public:
     //    }
     //}
 
-    // Процедура поиска минимально возможного пути между двумя вершинами методом Дейкстры
-    void findShortestPath(const T& startVertex, const T& endVertex) {
+    // Процедура поиска минимально возможного пути между двумя вершинами методом Дейкстры. Бросает исключение out_of_range если вершина не существует 
+    void findShortestPath(const T& startVertex, const T& endVertex) const {
         // Находим позиции стартовой и конечной вершин в графе
         int startPosition = findVertex(startVertex);
         int endPosition = findVertex(endVertex);
@@ -344,19 +356,19 @@ public:
         }
 
         // Инициализируем расстояния до всех вершин как бесконечность
-        vector<double> distances(size, numeric_limits<double>::infinity());
+        vector<double> distances(vertices.size(), numeric_limits<double>::infinity());
         // Исключение: расстояние до стартовой вершины равно 0
         distances[startPosition] = 0.0;
 
         // Создаем массив для отслеживания посещенных вершин
-        vector<bool> visited(size, false);
+        vector<bool> visited(vertices.size(), false);
 
         // Повторяем следующие шаги до тех пор, пока не будут посещены все вершины
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             // Находим вершину с минимальным расстоянием, которая еще не была посещена
             int minDistancePosition = -1;
             double minDistance = numeric_limits<double>::infinity();
-            for (int j = 0; j < size; ++j) {
+            for (int j = 0; j < vertices.size(); ++j) {
                 if (!visited[j] && distances[j] < minDistance) {
                     minDistancePosition = j;
                     minDistance = distances[j];
@@ -372,7 +384,7 @@ public:
             visited[minDistancePosition] = true;
 
             // Для всех соседних вершин, которые еще не были посещены, рассчитываем новое расстояние
-            for (int j = 0; j < size; ++j) {
+            for (int j = 0; j < vertices.size(); ++j) {
                 if (!visited[j]) {
                     double weight = 0.0;
                     if (minDistancePosition > j) {
@@ -438,8 +450,8 @@ public:
     //}
 
 
-    // Процедура обхода графа в глубину
-    void depthFirstSearch(const T& startVertex) {
+    // Процедура обхода графа в глубину. Бросает исключение out_of_range если вершина не существует 
+    void depthFirstSearch(const T& startVertex) const {
         // Находим позицию стартовой вершины в графе
         int startPosition = findVertex(startVertex);
 
@@ -449,7 +461,7 @@ public:
         }
 
         // Создаем массив для отслеживания посещенных вершин
-        vector<bool> visited(size, false);
+        vector<bool> visited(vertices.size(), false);
 
         // Определяем функцию dfs, которая принимает позицию вершины
         function<void(int)> dfs = [&](int position) {
@@ -459,7 +471,7 @@ public:
             cout << vertices[position] << " ";
 
             // Для всех соседних вершин, которые еще не были посещены, вызываем функцию dfs рекурсивно
-            for (int i = 0; i < size; ++i) {
+            for (int i = 0; i < vertices.size(); ++i) {
                 if (!visited[i]) {
                     double weight = 0.0;
                     if (position > i) {
@@ -514,9 +526,9 @@ public:
     //    }
     //    cout << endl;
     //}
- 
-    // Процедура обхода графа в ширину
-    void breadthFirstSearch(const T& startVertex) {
+
+    // Процедура обхода графа в ширину. Бросает исключение out_of_range если вершина не существует 
+    void breadthFirstSearch(const T& startVertex) const {
         // Находим позицию стартовой вершины в графе
         int startPosition = findVertex(startVertex);
 
@@ -526,7 +538,7 @@ public:
         }
 
         // Создаем массив для отслеживания посещенных вершин и очередь для хранения вершин, которые нужно посетить
-        vector<bool> visited(size, false);
+        vector<bool> visited(vertices.size(), false);
         queue<int> queue;
 
         // Помечаем стартовую вершину как посещенную и добавляем ее в очередь
@@ -541,7 +553,7 @@ public:
             cout << vertices[position] << " ";
 
             // Для всех соседних вершин, которые еще не были посещены, помечаем их как посещенные и добавляем их в очередь
-            for (int i = 0; i < size; ++i) {
+            for (int i = 0; i < vertices.size(); ++i) {
                 if (!visited[i]) {
                     double weight = 0.0;
                     if (position > i) {
@@ -581,7 +593,7 @@ public:
     //}
 
     // Метод печати матрицы смежности
-    void printAdjacencyMatrix() {
+    void printAdjacencyMatrix() const {
         cout << " " << setw(9);
         for (const T& name : vertices) {
             cout << name << setw(8) << " ";
@@ -612,7 +624,7 @@ public:
     //    adjacencyMatrix[endPosition][startPosition] = weight;
     //}
 
-    // Метод обновления ребра между вершинами
+    // Метод обновления ребра между вершинами. Бросает исключение out_of_range если вершина не существует 
     void updateEdge(const T& startVertex, const T& endVertex, double weight) {
         int startPosition = findVertex(startVertex);
         int endPosition = findVertex(endVertex);
@@ -677,8 +689,8 @@ public:
     //    dfs(startPosition);
     //}
 
-    // Метод поиска всех путей между двумя вершинами
-    void findAllPaths(const T& startVertex, const T& endVertex) {
+    // Метод поиска всех путей между двумя вершинами. Бросает исключение out_of_range если вершина не существует 
+    void findAllPaths(const T& startVertex, const T& endVertex) const {
         // Находим позиции стартовой и конечной вершин в графе
         int startPosition = findVertex(startVertex);
         int endPosition = findVertex(endVertex);
@@ -689,7 +701,7 @@ public:
         }
 
         // Создаем массив для отслеживания посещенных вершин
-        vector<bool> visited(size, false);
+        vector<bool> visited(vertices.size(), false);
         // Создаем вектор для хранения пути
         vector<T> path;
 
@@ -709,7 +721,7 @@ public:
             }
             else {
                 // Для всех соседних вершин, которые еще не были посещены, вызываем функцию dfs
-                for (int i = 0; i < size; ++i) {
+                for (int i = 0; i < vertices.size(); ++i) {
                     if (!visited[i]) {
                         double weight = 0.0;
                         if (position > i) {
@@ -757,7 +769,7 @@ public:
     //}
 
         // Метод вычисления степени вершины
-    int getVertexDegree(const T& vertex) {
+    int getVertexDegree(const T& vertex) const {
         int position = findVertex(vertex);
 
         if (position == -1) {
@@ -765,7 +777,7 @@ public:
         }
 
         int degree = 0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             if (i != position) {
                 double weight = 0.0;
                 if (position > i) {
@@ -798,9 +810,9 @@ public:
     //}
 
     // Метод вычисления суммы весов ребер
-    double getEdgesWeightSum() {
+    double getEdgesWeightSum() const {
         double sum = 0.0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < vertices.size(); ++i) {
             for (int j = 0; j < i; ++j) {
                 sum += adjacencyMatrix[i][j];
             }
@@ -808,8 +820,50 @@ public:
         return sum;
     }
 
+    // Процедура сохранения графа в формате GraphML
+    void saveToGraphML(const string& filename) const {
+        ofstream file(filename);
+        if (!file.is_open()) {
+            throw runtime_error("Не удалось открыть файл для записи.");
+        }
 
+        file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl;
+        file << "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"" << endl;
+        file << "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"" << endl;
+        file << "         xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns" << endl;
+        file << "         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">" << endl;
 
+        file << "  <key id=\"weight\" for=\"edge\" attr.name=\"weight\" attr.type=\"double\"\/>" << endl;
+        file << "  <key id=\"label\" for=\"node\" attr.name=\"label\" attr.type=\"string\"\/>" << endl;
+        // Описание графа
+        file << "  <graph id=\"graph\" edgedefault=\"undirected\">" << endl;
+
+        // Вершины
+        for (size_t i = 0; i < vertices.size(); ++i) {
+            file << "    <node id=\"" << i << "\">" << endl;
+            //             file << "    <node id=\"" << vertices[i] << "\">" << endl;
+            file << "      <data key=\"label\">" << vertices[i] << "</data>" << endl;
+            file << "    </node>" << endl;
+        }
+
+        // Ребра
+        for (size_t i = 0; i < vertices.size(); ++i) {
+            for (size_t j = 0; j < i; ++j) {
+                if (adjacencyMatrix[i][j] != 0.0) {
+                    file << "    <edge id=\"" << i << "_" << j << "\" source=\"" << i << "\" target=\"" << j << "\" weight=\"" << adjacencyMatrix[i][j] << "\">" << endl;
+                    file << "      <data key=\"weight\">" << adjacencyMatrix[i][j] << "</data>" << endl;
+                    file << "    </edge>" << endl;
+                }
+            }
+        }
+
+        file << "  </graph>" << endl;
+        file << "</graphml>" << endl;
+
+        file.close();
+    }
+
+    //Тестирование класса
     static void runTests() {
         // Тестирование пустого графа
         WeightedGraphLegacy<string> emptyGraph;
