@@ -3,9 +3,22 @@
 //Сделал -- Ошлаков Данил, ИВТ-22
 #include <iostream>
 #include "GraphLegacy.h"
+
+using namespace std;
+
 int main() {
     WeightedGraphLegacy<std::string>::runTests();
     WeightedGraphLegacy<std::string> graph;
+    WeightedGraphLegacy<std::string> randGraph;
+    randGraph = createRandomGraph(20, 10);
+    std::cout << "Сгенерированный: " << std::endl;
+    randGraph.printVertices();
+    graph.printEdges();
+    std::cout << "Количество ребер: " << randGraph.getEdgeCount() << std::endl;
+    std::cout << "Количество вершин: " << randGraph.getVertexCount() << std::endl;
+    std::cout << "Минимально возможный путь между вершинами А и С: " << std::endl;
+
+    std::cout << "Ручной граф: " << std::endl;
 
     graph.insertVertex("A");
     graph.insertVertex("B");
@@ -25,7 +38,13 @@ int main() {
     std::cout << "Количество ребер: " << graph.getEdgeCount() << std::endl;
     std::cout << "Количество вершин: " << graph.getVertexCount() << std::endl;
     std::cout << "Минимально возможный путь между вершинами А и С: " << std::endl;
-    graph.findShortestPath("A", "C");
+    vector<double> distances = graph.findShortestPath("A", "C");
+    for (double val : distances)
+    {
+        cout << val << "   ";
+    }
+    cout << endl;
+    cout << distances.size() << endl;
     graph.depthFirstSearch("A");
     graph.breadthFirstSearch("A");
     graph.printAdjacencyMatrix();

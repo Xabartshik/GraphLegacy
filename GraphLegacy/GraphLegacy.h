@@ -10,10 +10,11 @@
 #include <sstream>
 #include <fstream>
 #include <cassert>
+#include <random>
 /*
 ИСПРАВЛЕНО:
 1. КОММЕНТАРИИ: ДОБАВЛЕНО --- ОПИСАНИЕ БРОСАНИЯ ИСКЛЮЧЕНИЙ
-2. КОД: РАНЬШЕ ГРАФ ХРАНИЛ ПОЛЕ РАЗМЕРА. СЕЙЧАС -- НЕ ХРАНИТ
+2. КОД: РАНЬШЕ ГРАФ ХРАНИЛ ПОЛЕ РАЗМЕРА. СЕЙЧАС -- НЕ ХРАНИТ. ДРОБАВИЛ CONST, ГДЕ НЕОБХОДИМО
 3. МИН.ПУТЬ: ЛИСТОЧЕК С ОПИСАНИЕМ АЛГОРИТМА
 
 АНАЛИЗ ГРАФА:
@@ -39,7 +40,7 @@
 | printEdges()                               | O(n^2)                  |
 | getEdgeCount()                             | O(n^2)                  |
 | getVertexCount()                           | O(1)                    |
-| findShortestPath(const T& startVertex, const T& endVertex) | O(n^2 + E) |
+| findShortestPath(const T& startVertex, const T& endVertex) | O(log(n + E)) |
 | depthFirstSearch(const T& startVertex)     | O(n + E)                |
 | breadthFirstSearch(const T& startVertex)   | O(n + E)                |
 | printAdjacencyMatrix()                     | O(n^2)                  |
@@ -345,7 +346,7 @@ public:
     //}
 
     // Процедура поиска минимально возможного пути между двумя вершинами методом Дейкстры. Бросает исключение out_of_range если вершина не существует 
-    void findShortestPath(const T& startVertex, const T& endVertex) const {
+    vector<double> findShortestPath(const T& startVertex, const T& endVertex) const {
         // Находим позиции стартовой и конечной вершин в графе
         int startPosition = findVertex(startVertex);
         int endPosition = findVertex(endVertex);
@@ -360,58 +361,53 @@ public:
         // Исключение: расстояние до стартовой вершины равно 0
         distances[startPosition] = 0.0;
 
-        // Создаем массив для отслеживания посещенных вершин
-        vector<bool> visited(vertices.size(), false);
+        // Создаем приоритетную очередь (тип хранимого значения, в чем хранить, компаратор (по возрастанию)) для хранения вершин с минимальным расстоянием
+        priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> queue;
+        // Добавляем стартовую вершину в очередь
+        queue.push({ 0.0, startPosition });
 
         // Повторяем следующие шаги до тех пор, пока не будут посещены все вершины
-        for (int i = 0; i < vertices.size(); ++i) {
-            // Находим вершину с минимальным расстоянием, которая еще не была посещена
-            int minDistancePosition = -1;
-            double minDistance = numeric_limits<double>::infinity();
+        while (!queue.empty()) {
+            // Извлекаем вершину с минимальным расстоянием из очереди
+            double distance = queue.top().first;
+            int position = queue.top().second;
+            queue.pop();
+
+            // Если мы достигли конечной вершины, возвращаем расстояния
+            if (position == endPosition) {
+                return distances;
+            }
+
+            // Для всех соседних вершин рассчитываем новое расстояние
             for (int j = 0; j < vertices.size(); ++j) {
-                if (!visited[j] && distances[j] < minDistance) {
-                    minDistancePosition = j;
-                    minDistance = distances[j];
+                // Получаем вес ребра между текущей вершиной и соседней вершиной
+                double weight = 0.0;
+                if (position > j) {
+                    weight = adjacencyMatrix[position][j];
                 }
-            }
+                else if (position < j) {
+                    weight = adjacencyMatrix[j][position];
+                }
 
-            // Если такая вершина не найдена, алгоритм завершается
-            if (minDistancePosition == -1) {
-                break;
-            }
+                // Если ребро существует (т.е. вес не равен 0)
+                if (weight != 0.0) {
+                    // Рассчитываем новое расстояние до соседней вершины
+                    double newDistance = distance + weight;
 
-            // Помечаем вершину как посещенную
-            visited[minDistancePosition] = true;
-
-            // Для всех соседних вершин, которые еще не были посещены, рассчитываем новое расстояние
-            for (int j = 0; j < vertices.size(); ++j) {
-                if (!visited[j]) {
-                    double weight = 0.0;
-                    if (minDistancePosition > j) {
-                        weight = adjacencyMatrix[minDistancePosition][j];
-                    }
-                    else if (minDistancePosition < j) {
-                        weight = adjacencyMatrix[j][minDistancePosition];
-                    }
-                    if (weight != 0.0) {
-                        double newDistance = distances[minDistancePosition] + weight;
-                        // Если новое расстояние меньше текущего расстояния, обновляем его
-                        if (newDistance < distances[j]) {
-                            distances[j] = newDistance;
-                        }
+                    // Если новое расстояние меньше текущего расстояния, обновляем его
+                    if (newDistance < distances[j]) {
+                        distances[j] = newDistance;
+                        // Добавляем соседнюю вершину в очередь
+                        queue.push({ newDistance, j });
                     }
                 }
             }
         }
 
-        // После завершения алгоритма, расстояние до конечной вершины является минимально возможным путем
-        if (distances[endPosition] == numeric_limits<double>::infinity()) {
-            throw out_of_range("Путь между вершинами не найден.");
-        }
-        else {
-            cout << "Минимально возможный путь между вершинами: " << distances[endPosition] << endl;
-        }
+        // Если мы не смогли найти путь до конечной вершины, бросаем исключение
+        throw out_of_range("Путь между вершинами не найден.");
     }
+
 
 
 
@@ -863,6 +859,8 @@ public:
         file.close();
     }
 
+
+
     //Тестирование класса
     static void runTests() {
         // Тестирование пустого графа
@@ -987,3 +985,49 @@ public:
     }
 };
 
+WeightedGraphLegacy<string> createRandomGraph(size_t vertexCount, size_t maxEdgesPerVertex) {
+    WeightedGraphLegacy<string> graph;
+
+    // Генерируем названия вершин
+    int nameLength = 1;
+    while (pow(26, nameLength) < vertexCount) {
+        nameLength++;
+    }
+
+    vector<string> vertexNames;
+    for (int i = 0; i < vertexCount; i++) {
+        string name;
+        int num = i;
+        for (int j = 0; j < nameLength; j++) {
+            name = static_cast<char>('A' + num % 26) + name;
+            num /= 26;
+        }
+        vertexNames.push_back(name);
+    }
+
+    // Добавляем вершины в граф
+    for (const auto& name : vertexNames) {
+        graph.insertVertex(name);
+    }
+
+    // Создаем случайные ребра
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<double> weightDistribution(1.0, 10.0);
+    uniform_int_distribution<int> vertexDistribution(0, vertexCount - 1);
+
+    for (int i = 0; i < vertexCount; i++) {
+        int edgesCount = min(maxEdgesPerVertex, vertexCount - 1);
+        for (int j = 0; j < edgesCount; j++) {
+            int endVertexIndex;
+            do {
+                endVertexIndex = vertexDistribution(gen);
+            } while (endVertexIndex == i);
+
+            double weight = weightDistribution(gen);
+            graph.insertEdge(vertexNames[i], vertexNames[endVertexIndex], weight);
+        }
+    }
+
+    return graph;
+}
